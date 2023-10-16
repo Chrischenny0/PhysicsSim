@@ -1,9 +1,11 @@
 #version 460
 out vec4 fragColor;
+in vec2 coords;
+
+uniform float radius;
+
 void main() {
-    float radius = 0.3;
-    vec2 val = vec2(gl_FragCoord.x, gl_FragCoord.y);
-    float dist = sqrt(dot(val, val));
+    float dist = distance(gl_FragCoord.xy, coords);
     if(dist >= radius){
         discard;
     }

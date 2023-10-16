@@ -8,7 +8,10 @@ set(CMAKE_PREFIX_PATH  ${CMAKE_CURRENT_SOURCE_DIR}/FreeGLUT;${CMAKE_CURRENT_SOUR
 find_package(FreeGLUT)
 find_package(glew)
 
-add_executable(PhysicsSim main.c)
+add_executable(PhysicsSim
+        main.c
+        graphics.h graphics.c
+)
 
 target_link_libraries(PhysicsSim PRIVATE GLEW::glew)
 target_link_libraries(PhysicsSim PRIVATE FreeGLUT::freeglut_static)
