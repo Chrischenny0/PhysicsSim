@@ -9,7 +9,7 @@
 
 const int radius = 10;
 
-int numOfBalls = 450;
+int numOfBalls = 200;
 
 typedef struct vector{
     float xComp;
@@ -45,8 +45,8 @@ const GLchar *fragmentShaderSrc = "#version 460\n"
                                   "    fragColor = vec4(1, 0, 0, 1);\n"
                                   "}";
 
-int width = 1400;
-int height = 800;
+int width = 400;
+int height = 400;
 
 float points[12] = {
         -1.0f,  -1.0f,
@@ -193,7 +193,7 @@ void display(){
 
     int currTime = glutGet(GLUT_ELAPSED_TIME);
 
-    float deltaTime = (currTime - prevTime) / 900.0;
+    float deltaTime = (currTime - prevTime) / 1000.0;
 
     prevTime = currTime;
 

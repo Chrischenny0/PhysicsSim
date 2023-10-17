@@ -1,7 +1,8 @@
 #include "graphics.h"
 
 // TODO: Clean everything up
-// TODO: write sim program
+// TODO: Add user interaction to sim
+// TODO: localized interaction
 
 // Physics structs
 typedef struct ball{
@@ -9,7 +10,7 @@ typedef struct ball{
     vector vector;
 } ball;
 
-const vector GRAVITY_VEC = {0.0f, -0.01f};
+const vector GRAVITY_VEC = {0.0f, -0.5f};
 
 // Physics globals
 
@@ -30,15 +31,15 @@ void initDynamicPhysics(){
 
     int length = ceil(sqrt(numOfBalls));
 
-    float row = 1.0 - ((float) radius / height) * 2;
-    float column = -1.0 + ((float) radius / width) * 2;
+    float row = 1.0 - ((float) radius / height) * 2 - 0.01;
+    float column = -1.0 + ((float) radius / width) * 2 + 0.01;
 
     float tmpColumn;
 
     printf("%f\n", row);
     printf("%f\n", column);
 
-    float diffY = (row * 2) / length;
+    float diffY = (row * 2) / length - 0.02;
     float diffX = (column * -2) / length;
 
     for(int i = 0; i < length; i++){
@@ -47,7 +48,7 @@ void initDynamicPhysics(){
             if(numOfBalls < i * length + k){
                 goto done;
             }
-            sharePositions[(i * length * 2) + (k * 2)] = tmpColumn;
+            sharePositions[(i * length * 2) + (k * 2)] = tmpColumn + 0.01 * i;
             sharePositions[(i * length * 2) + (k * 2) + 1] = row;
 
             tmpColumn += diffX;
@@ -59,17 +60,15 @@ void initDynamicPhysics(){
     for(int i = 0 ; i < numOfBalls; i++){
         balls[i].position = sharePositions + i * 2;
     }
-    balls[0].vector.xComp = 0.01;
-    balls[0].vector.yComp = -0.01;
 
 
     prevTime = glutGet(GLUT_ELAPSED_TIME);
 }
 
 
-void applyVector(vector *dest, vector src){
-    dest->xComp += src.xComp;
-    dest->yComp += src.yComp;
+void applyForce(vector *dest, vector src, float deltaTime){
+    dest->xComp += src.xComp * deltaTime;
+    dest->yComp += src.yComp * deltaTime;
 }
 
 void moveParticle(ball *ball, float deltaTime){
@@ -77,29 +76,15 @@ void moveParticle(ball *ball, float deltaTime){
     ball->position[1] += ball->vector.yComp * deltaTime;
 }
 
-// TODO: Make this integral 0
+
 float forceCalculate(float distance){
-    // Adjust from atomic units to pixels
+    // Adjust from pixels to angstrom (atomic units)
     distance *= 0.1375f;
 
-//    float distBetween = 5.0f;
-//    float pushStr = 3;
-//    float pullStr = 2.99;
-//    float distBetween = 5.0f;
-//    float pushStr = 2;
-//    float pullStr = 1.5;
-    float distBetween = 5.0f;
-    float pushStr = 3;
-    float pullStr = 1;
-    float force = (powf(distBetween / distance, pushStr) - powf(distBetween / distance, pullStr));
-
-    if(force > 1){
-        force = 1;
-    }
-    if(force < 0){
+    if(distance >= 4){
         return 0;
     }
-    return force;
+    return powf(4 / distance, 12);
 }
 
 float repellingForce(ball left, ball right){
@@ -111,68 +96,66 @@ float repellingForce(ball left, ball right){
 
     float distance = sqrtf(powf(rightX - leftX, 2) + powf(rightY - leftY, 2));
 
-    float outForce;
-
-    if(distance < 50){
-        outForce = forceCalculate(distance);
-    }
-    else{
-        outForce = 0;
-    }
-
-    return outForce;
+    return forceCalculate(distance);
 }
 
 void physics(float deltaTime){
     float xConversion = width / 2.0f;
     float yConversion = height / 2.0f;
 
-    for(int i = 0; i < numOfBalls; i++){
-        applyVector(&balls[i].vector, GRAVITY_VEC);
+    deltaTime /= 2;
 
-        for(int k = i + 1; k < numOfBalls; k++){
-            float force = repellingForce(balls[i], balls[k]);
-            if(force != 0){
-                ball *leftBall = &balls[i];
-                ball *rightBall = &balls[k];
+    for(int l = 0; l < 2; l++){
+        for(int i = 0; i < numOfBalls; i++){
+            // Apply gravity to each
+            applyForce(&balls[i].vector, GRAVITY_VEC, deltaTime);
 
-                if(leftBall->position[0] > rightBall->position[0]){
-                    leftBall = &balls[k];
-                    rightBall = &balls[i];
+            for(int k = i + 1; k < numOfBalls; k++){
+                // Calculate the repel force between each ball TODO: Make this localized
+                float force = repellingForce(balls[i], balls[k]);
+                if(force != 0){
+                    ball *leftBall = &balls[i];
+                    ball *rightBall = &balls[k];
+
+                    if(leftBall->position[0] > rightBall->position[0]){
+                        leftBall = &balls[k];
+                        rightBall = &balls[i];
+                    }
+
+                    float angle = atan2f(rightBall->position[1] - leftBall->position[1], rightBall->position[0] - leftBall->position[0]);
+
+                    vector repelForce = {cosf(angle) * force, sinf(angle) * force};
+
+                    applyForce(&rightBall->vector, repelForce, deltaTime);
+
+                    repelForce.xComp *= -1;
+                    repelForce.yComp *= -1;
+
+                    applyForce(&leftBall->vector, repelForce, deltaTime);
+
                 }
+            }
 
-                float angle = atan2f(rightBall->position[1] - leftBall->position[1], rightBall->position[0] - leftBall->position[0]);
+            float absX = fabsf(balls[i].position[0]);
+            float absY = fabsf(balls[i].position[1]);
 
-                vector repelForce = {cosf(angle) * force, sinf(angle) * force};
-
-                applyVector(&rightBall->vector, repelForce);
-
-                repelForce.xComp *= -1;
-                repelForce.yComp *= -1;
-
-                applyVector(&leftBall->vector, repelForce);
-
-                balls[i].vector.xComp *= 0.992;
-                balls[i].vector.yComp *= 0.992;
-                balls[k].vector.xComp *= 0.992;
-                balls[k].vector.yComp *= 0.992;
+            if((1.0f - absX) * xConversion  <= 12) {
+                balls[i].vector.xComp *= -1;
+            }
+            if((1.0f - absY) * yConversion  <= 12) {
+                balls[i].vector.yComp *= -1;
             }
         }
 
-        float absX = fabsf(balls[i].position[0]);
-        float absY = fabsf(balls[i].position[1]);
-
-        if((1.0f - absX) * xConversion  <= 12) {
-            balls[i].vector.xComp *= -1;
-        }
-        if((1.0f - absY) * yConversion  <= 12) {
-            balls[i].vector.yComp *= -1;
+        for(int i = 0; i < numOfBalls; i++){
+            if(l == 0){
+                balls[i].vector.xComp *= 0.999;
+                balls[i].vector.yComp *= 0.999;
+            }
+            moveParticle(&balls[i], deltaTime / 2);
         }
     }
 
-    for(int i = 0; i < numOfBalls; i++){
-        moveParticle(&balls[i], deltaTime);
-    }
 }
 
 
