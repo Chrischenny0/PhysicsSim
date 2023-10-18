@@ -45,8 +45,8 @@ const GLchar *fragmentShaderSrc = "#version 460\n"
                                   "    fragColor = vec4(1, 0, 0, 1);\n"
                                   "}";
 
-int width = 400;
-int height = 400;
+int DSP_WIDTH;
+int DSP_HEIGHT;
 
 float points[12] = {
         -1.0f,  -1.0f,
@@ -163,7 +163,7 @@ void initGL(){
 
     GLint sizeUniform = glGetUniformLocation(shaderProgram, "size");
 
-    float tmp[] = {width, height};
+    float tmp[] = {DSP_WIDTH, DSP_HEIGHT};
     glUniform2fv(sizeUniform, 1, tmp);
 
     sizeUniform = glGetUniformLocation(shaderProgram, "radius");
@@ -211,12 +211,12 @@ void display(){
 }
 
 void resize(int newWidth, int newHeight){
-    height = newHeight;
-    width = newWidth;
+    DSP_HEIGHT = newHeight;
+    DSP_WIDTH = newWidth;
 
     for(int i = 0; i < 12; i += 2){
-        baseVertices[i] = points[i] * radius * 2 / width;
-        baseVertices[i + 1] = points[i + 1] * radius * 2 / height;
+        baseVertices[i] = points[i] * radius * 2 / DSP_WIDTH;
+        baseVertices[i + 1] = points[i + 1] * radius * 2 / DSP_HEIGHT;
     }
 
     glBindBuffer(GL_ARRAY_BUFFER, baseVBO);
