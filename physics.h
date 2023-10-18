@@ -46,50 +46,45 @@ void initBuckets(){
         free(buckets.array);
     }
 
-    buckets.horizontal = ceil(DSP_WIDTH / 58.0);
-    buckets.vertical = ceil(DSP_HEIGHT / 58.0);
+    buckets.horizontal = ceil(DSP_WIDTH / 73.0);
+    buckets.vertical = ceil(DSP_HEIGHT / 73.0);
 
-    buckets.array = calloc(sizeof(Bucket), buckets.horizontal * buckets.vertical);
+    buckets.size = buckets.horizontal * buckets.vertical;
+
+    buckets.array = calloc(buckets.size, sizeof(Bucket));
 }
 
 void addBallToBucket(Bucket *inBucket, ball *inBall){
     if(inBucket->balls == NULL){
         inBucket->capacity = 8;
         inBucket->size = 0;
-        inBucket->balls = calloc(sizeof(ball*),  inBucket->capacity);
+        inBucket->balls = calloc(inBucket->capacity, sizeof(ball*));
     }
     if(inBucket->size == inBucket->capacity){
-        inBucket->balls = realloc(inBucket->balls, inBucket->capacity *= 2);
+        inBucket->balls = realloc(inBucket->balls, sizeof(ball**) * (inBucket->capacity *= 2));
     }
     inBucket->balls[inBucket->size++] = inBall;
 }
 
 void loadBuckets(){
-    printf("horizontal: %d\n", buckets.horizontal);
-    printf("vertical: %d\n", buckets.vertical);
-
     for(int i = 0; i < buckets.size; i++){
         buckets.array[i].size = 0;
     }
 
     for(int i = 0; i < numOfBalls; i++){
-        int xPos = (int) (((balls[i].position[0] + 1) / 2) * DSP_WIDTH) / 58;
-        int yPos = (int) (((balls[i].position[1] + 1) / 2) * DSP_HEIGHT) / 58;
+
+        int xPos = (int) (((balls[i].position[0] + 1) / 2) * DSP_WIDTH) / 73;
+        int yPos = (int) (((balls[i].position[1] + 1) / 2) * DSP_HEIGHT) / 73;
+
+        if(xPos + yPos * buckets.horizontal >= 49 || xPos + yPos * buckets.horizontal < 0){
+            continue;
+        }
+
         printf("%d, %d: %d\n", xPos, yPos, xPos + yPos * buckets.horizontal);
 
         addBallToBucket(&buckets.array[xPos + yPos * buckets.horizontal], &balls[i]);
 
     }
-
-    for(int i = 0; i < buckets.size; i++){
-        for(int k = 0; k < buckets.array[i].size; k++){
-            int xPos = (int) (((buckets.array[i].balls[k]->position[0] + 1) / 2) * DSP_WIDTH) / 58;
-            int yPos = (int) (((buckets.array[i].balls[k]->position[1] + 1) / 2) * DSP_HEIGHT) / 58;
-
-            printf("%d, %d\n", xPos, yPos);
-        }
-    }
-
 }
 
 void initStaticPhysics(){
@@ -98,8 +93,6 @@ void initStaticPhysics(){
         baseVertices[i] = points[i] * radius * 2 / DSP_WIDTH;
         baseVertices[i + 1] = points[i + 1] * radius * 2 / DSP_HEIGHT;
     }
-
-    printf("distance: %f\n", (float) radius / DSP_WIDTH);
 }
 
 void initDynamicPhysics(){
@@ -115,7 +108,7 @@ void initDynamicPhysics(){
     printf("%f\n", row);
     printf("%f\n", column);
 
-    float diffY = (row * 2) / length - 0.02;
+    float diffY = (row * 2) / length;
     float diffX = (column * -2) / length;
 
     for(int i = 0; i < length; i++){
@@ -160,8 +153,11 @@ float forceCalculate(float distance){
     // Adjust from pixels to angstrom (atomic units)
     distance *= 0.1375f;
 
-    if(distance >= 4){
+    if(distance >= 5){
         return 0;
+    }
+    if(distance < 1){
+        return 2;
     }
     return powf(4 / distance, 12);
 }
@@ -178,62 +174,118 @@ float repellingForce(ball left, ball right){
     return forceCalculate(distance);
 }
 
+void checkBuckets(Bucket *main, Bucket *adj, float deltaTime){
+    for(int i = 0; i < main->size; i++){
+        for(int k = 0; k < adj->size; k++){
+            float force = repellingForce(*main->balls[i], *adj->balls[k]);
+
+            if(force != 0){
+                ball *leftBall = main->balls[i];
+                ball *rightBall = adj->balls[k];
+
+                if(leftBall->position[0] > rightBall->position[0]){
+                    leftBall = &balls[k];
+                    rightBall = &balls[i];
+                }
+
+                float angle = atan2f(rightBall->position[1] - leftBall->position[1], rightBall->position[0] - leftBall->position[0]);
+
+                vector repelForce = {cosf(angle) * force, sinf(angle) * force};
+
+                applyForce(&rightBall->vector, repelForce, deltaTime);
+
+                repelForce.xComp *= -1;
+                repelForce.yComp *= -1;
+
+                applyForce(&leftBall->vector, repelForce, deltaTime);
+
+            }
+        }
+    }
+}
+
 void physics(float deltaTime){
     float xConversion = DSP_WIDTH / 2.0f;
     float yConversion = DSP_HEIGHT / 2.0f;
 
-    deltaTime /= 2;
+    deltaTime /= 8;
 
-    for(int l = 0; l < 2; l++){
+
+    for(int step = 0; step < 8; step++){
+        loadBuckets();
+
         for(int i = 0; i < numOfBalls; i++){
-            // Apply gravity to each
-            //applyForce(&balls[i].vector, GRAVITY_VEC, deltaTime);
+            applyForce(&balls[i].vector, GRAVITY_VEC, deltaTime);
 
-            for(int k = i + 1; k < numOfBalls; k++){
-                // Calculate the repel force between each ball TODO: Make this localized
-                float force = repellingForce(balls[i], balls[k]);
-                if(force != 0){
-                    ball *leftBall = &balls[i];
-                    ball *rightBall = &balls[k];
+        }
 
-                    if(leftBall->position[0] > rightBall->position[0]){
-                        leftBall = &balls[k];
-                        rightBall = &balls[i];
+        for(int i = 0; i < buckets.size; i++){
+
+            for(int k = 0; k < buckets.array[i].size; k++){
+                for(int m = k + 1; m < buckets.array[i].size; m++){
+
+                    float force = repellingForce(*(buckets.array[i].balls[k]),*(buckets.array[i].balls[m]));
+
+                    if(force != 0){
+                        ball *leftBall = buckets.array[i].balls[k];
+                        ball *rightBall = buckets.array[i].balls[m];
+
+                        if(leftBall->position[0] > rightBall->position[0]){
+                            leftBall = buckets.array[i].balls[m];
+                            rightBall = buckets.array[i].balls[k];
+                        }
+
+                        float angle = atan2f(rightBall->position[1] - leftBall->position[1], rightBall->position[0] - leftBall->position[0]);
+
+                        vector repelForce = {cosf(angle) * force, sinf(angle) * force};
+
+                        applyForce(&rightBall->vector, repelForce, deltaTime);
+
+                        repelForce.xComp *= -1;
+                        repelForce.yComp *= -1;
+
+                        applyForce(&leftBall->vector, repelForce, deltaTime);
+
                     }
-
-                    float angle = atan2f(rightBall->position[1] - leftBall->position[1], rightBall->position[0] - leftBall->position[0]);
-
-                    vector repelForce = {cosf(angle) * force, sinf(angle) * force};
-
-                    applyForce(&rightBall->vector, repelForce, deltaTime);
-
-                    repelForce.xComp *= -1;
-                    repelForce.yComp *= -1;
-
-                    applyForce(&leftBall->vector, repelForce, deltaTime);
-
                 }
             }
 
-            float absX = fabsf(balls[i].position[0]);
-            float absY = fabsf(balls[i].position[1]);
-
-            if((1.0f - absX) * xConversion  <= 12) {
-                balls[i].vector.xComp *= -1;
+            if(i % buckets.horizontal != 0 && i + buckets.horizontal - 1 < buckets.size){
+                checkBuckets(buckets.array + i, buckets.array + i + buckets.horizontal - 1, deltaTime);
             }
-            if((1.0f - absY) * yConversion  <= 12) {
-                balls[i].vector.yComp *= -1;
+
+            if(i + buckets.horizontal < buckets.size){
+                checkBuckets(buckets.array + i, buckets.array + i + buckets.horizontal, deltaTime);
+            }
+
+            if(i + buckets.horizontal + 1 < buckets.size){
+                checkBuckets(buckets.array + i, buckets.array + i + buckets.horizontal + 1, deltaTime);
+            }
+
+            if(i + 1 < buckets.size && (i + 1) % buckets.horizontal != 0){
+                checkBuckets(buckets.array + i, buckets.array + i + 1, deltaTime);
+
             }
         }
 
         for(int i = 0; i < numOfBalls; i++){
-            if(l == 0){
-                balls[i].vector.xComp *= 0.999;
-                balls[i].vector.yComp *= 0.999;
+            float absX = fabsf(balls[i].position[0]);
+            float absY = fabsf(balls[i].position[1]);
+
+            if((1.0f - absX) * xConversion  <= 8) {
+                balls[i].vector.xComp *= -1;
             }
-            moveParticle(&balls[i], deltaTime / 2);
+            if((1.0f - absY) * yConversion  <= 8) {
+                balls[i].vector.yComp *= -1;
+            }
+            if(step == 0){
+                balls[i].vector.xComp *= 0.99;
+                balls[i].vector.yComp *= 0.99;
+            }
+            moveParticle(&balls[i], deltaTime / 5);
         }
     }
+
 
 }
 

@@ -5,7 +5,7 @@ int main(int argc, char** argv){
     // Setup window
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_ALPHA);
-    glutInitWindowSize(DSP_WIDTH = 400, DSP_HEIGHT = 400);
+    glutInitWindowSize(DSP_WIDTH = 800, DSP_HEIGHT = 800);
     glutInitWindowPosition(100, 50);
     glutCreateWindow("Triangle Using OpenGL");
 
