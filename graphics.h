@@ -9,7 +9,7 @@
 
 const int radius = 10;
 
-int numOfBalls = 200;
+int numOfBalls = 1600;
 
 typedef struct vector{
     float xComp;
