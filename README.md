@@ -10,6 +10,6 @@ I've taken some artistic liberties to make it act closer to what you would expec
 2) To model the loss of energy which would normally be through either molecules being ejected or loss of heat energy, there is a small fraction of energy removed every step.
 3) Since each step is discrete instead of continuous, the force between molecules had to be capped to eliminate runaway interactions.
 
-## Dependancies
-*[FreeGlut]()
-*[Glew]()
+## Dependencies
+- [FreeGlut]()
+- [Glew]()
