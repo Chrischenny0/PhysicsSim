@@ -7,20 +7,21 @@
 #include <time.h>
 #include <math.h>
 
-const int radius = 10;
-
-int numOfBalls = 1600;
-
 typedef struct vector{
     float xComp;
     float yComp;
 } vector;
 
-GLuint baseVBO;
-float *sharePositions;
-static int prevTime;
+const int radius = 10;
 
-struct timespec start, end;
+int numOfBalls = 2000;
+
+float *sharePositions;
+
+static GLuint baseVBO;
+static int prevTime;
+static GLuint shaderProgram;
+struct timespec prev;
 
 
 const GLchar *vertexShaderSrc = "#version 460\n"
@@ -128,7 +129,7 @@ void initGL(){
     GLuint fragmentShader = createShader(GL_FRAGMENT_SHADER, fragmentShaderSrc);
 
     // Create program and attach the shaders
-    GLuint shaderProgram = createProgramAttachShaders(vertexShader, fragmentShader);
+    shaderProgram = createProgramAttachShaders(vertexShader, fragmentShader);
 
     //Get the input attribute "pos"
     GLint posAttrib = glGetAttribLocation(shaderProgram, "pos");
@@ -169,6 +170,10 @@ void initGL(){
     sizeUniform = glGetUniformLocation(shaderProgram, "radius");
 
     glUniform1f(sizeUniform, radius - 1);
+
+
+    // Initialize fps counter
+    clock_gettime(CLOCK_MONOTONIC_RAW, &prev);
 }
 
 void (*physicsFunc)(float);
@@ -177,20 +182,21 @@ void display(){
     // FPS COUNTER
     static int iterations = 0;
 
-    if(start.tv_nsec == 0){
-        clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-    }
-    clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+    struct timespec start;
 
-    if(end.tv_sec - start.tv_sec >= 1){
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+
+    if(start.tv_sec - prev.tv_sec >= 1){
         printf("%d\n", iterations);
         iterations = 0;
-        clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+        clock_gettime(CLOCK_MONOTONIC_RAW, &prev);
     }
+
 
     iterations++;
     // FPS COUNTER
 
+    // Delta Time maker
     int currTime = glutGet(GLUT_ELAPSED_TIME);
 
     float deltaTime = (currTime - prevTime) / 1000.0;
@@ -201,13 +207,11 @@ void display(){
 
 
     glClearColor(0,0,0,0);
-
     glClear(GL_COLOR_BUFFER_BIT);
 
     glDrawArraysInstanced(GL_TRIANGLES, 0, 6, numOfBalls);
 
     glutSwapBuffers();
-    glutPostRedisplay();
 }
 
 void resize(int newWidth, int newHeight){
@@ -223,7 +227,17 @@ void resize(int newWidth, int newHeight){
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(baseVertices), baseVertices);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+
+    GLint sizeUniform = glGetUniformLocation(shaderProgram, "size");
+
+    float tmp[] = {DSP_WIDTH, DSP_HEIGHT};
+    glUniform2fv(sizeUniform, 1, tmp);
+
     glViewport(0,0,newWidth, newHeight);
+}
+
+void idle(){
+    glutPostRedisplay();
 }
 
 #endif //PHYSICSSIM_GRAPHICS_H

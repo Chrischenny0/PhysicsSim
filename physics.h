@@ -47,11 +47,8 @@ void initBuckets(){
         free(buckets.array);
     }
 
-    buckets.horizontal = ceil(DSP_WIDTH / 58.0);
-    buckets.vertical = ceil(DSP_HEIGHT / 58.0);
-
-    printf("HORIZONTAL: %d\n", buckets.horizontal);
-    printf("VERTICAL: %d\n", buckets.vertical);
+    buckets.horizontal = ceil(DSP_WIDTH / 58.0); // TODO: Radius
+    buckets.vertical = ceil(DSP_HEIGHT / 58.0); // TODO: Radius
 
     buckets.size = buckets.horizontal * buckets.vertical;
 
@@ -76,18 +73,15 @@ void loadBuckets(){
     }
 
     for(int i = 0; i < numOfBalls; i++){
-
-        int xPos = (int) (((*balls[i].xPos + 1) / 2) * DSP_WIDTH) / 58;
-        int yPos = (int) (((*balls[i].yPos + 1) / 2) * DSP_HEIGHT) / 58;
+        int xPos = (int) (((*balls[i].xPos + 1) / 2) * DSP_WIDTH) / 58; // TODO: Radius
+        int yPos = (int) (((*balls[i].yPos + 1) / 2) * DSP_HEIGHT) / 58; // TODO: Radius
 
 
         if(xPos + yPos * buckets.horizontal >= buckets.size || xPos + yPos * buckets.horizontal < 0){
-            printf("skipped: %d\n", i);
             continue;
         }
 
         addBallToBucket(&buckets.array[xPos + yPos * buckets.horizontal], &balls[i]);
-
     }
 }
 
@@ -99,7 +93,7 @@ void initStaticPhysics(){
     }
 }
 
-void initDynamicPhysics(){
+void initDynamicPhysics(){ // TODO: Spacing better
     balls = calloc(numOfBalls, sizeof(ball));
 
     int length = ceil(sqrt(numOfBalls));
@@ -132,7 +126,6 @@ void initDynamicPhysics(){
         balls[i].yPos = sharePositions + (i * 2) + 1;
     }
 
-
     initBuckets();
 
     prevTime = glutGet(GLUT_ELAPSED_TIME);
@@ -152,15 +145,16 @@ void moveParticle(ball *ball, float deltaTime){
 
 float forceCalculate(float distance){
     // Adjust from pixels to angstrom (atomic units)
-    distance *= 0.1375f;
+    distance *= 0.1375f;  // TODO: Radius make static
 
     if(distance >= 4){
         return 0;
     }
-//    if(distance < 3){
-//        return 1;
-//    }
-    return powf(4 / distance, 12);
+
+    if(distance < 2.5){
+        distance = 2.5;
+    }
+    return powf(4 / distance, 12);  // TODO: Make this user definable?
 }
 
 float repellingForce(const ball *left, const ball *right){
@@ -170,7 +164,7 @@ float repellingForce(const ball *left, const ball *right){
     float rightY = (*right->yPos + 1) * (float) DSP_HEIGHT / 2;
 
 
-    float distance = sqrtf(powf(rightX - leftX, 2) + powf(rightY - leftY, 2));
+    float distance = sqrtf(powf(rightX - leftX, 2) + powf(rightY - leftY, 2));  // TODO: DRY
 
     float force = forceCalculate(distance);
 
@@ -178,6 +172,9 @@ float repellingForce(const ball *left, const ball *right){
 }
 
 void checkBuckets(Bucket *main, Bucket *adj, float deltaTime){
+    if(main->size == 0 || adj->size == 0){
+        return;
+    }
     for(int i = 0; i < main->size; i++){
         for(int k = 0; k < adj->size; k++){
             float force = repellingForce(main->balls[i], adj->balls[k]);
@@ -211,13 +208,17 @@ void physics(float deltaTime){
     float xConversion = DSP_WIDTH / 2.0f;
     float yConversion = DSP_HEIGHT / 2.0f;
 
-    deltaTime /= 8;
+    int stepSize = 8;
+
+    deltaTime /= stepSize;
 
 
-    for(int step = 0; step < 8; step++){
+    for(int step = 0; step < stepSize; step++){
         loadBuckets();
 
         for(int i = 0; i < numOfBalls; i++){
+            moveParticle(&balls[i], deltaTime / 2);
+
             applyForce(&balls[i].vector, GRAVITY_VEC, deltaTime);
         }
 
@@ -285,12 +286,17 @@ void physics(float deltaTime){
                 balls[i].vector.xComp *= 0.99;
                 balls[i].vector.yComp *= 0.99;
             }
-            moveParticle(&balls[i], deltaTime);
+            moveParticle(&balls[i], deltaTime / 2);
         }
 
     }
+}
 
-
+void dealloc(){
+    for(int i = 0; i < buckets.size; i++){
+        free(buckets.array[i].balls);
+    }
+    free(buckets.array);
 }
 
 #endif //PHYSICSSIM_PHYSICS_H
