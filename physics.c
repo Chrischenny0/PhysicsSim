@@ -1,5 +1,7 @@
 #include "physics.h"
 
+#define min(x, y) (x < y)? x : y
+
 // Physics structs
 typedef struct Vector{
     float xComp;
@@ -28,7 +30,7 @@ typedef struct Buckets{
 
 // CONSTANTS
 // Gravity
-static const Vector GRAVITY_VEC = {0.0f, -0.5f};
+static Vector GRAVITY_VEC = {0.0f, -0.98f};
 
 // Each circle refers to its coordinates in the shared position space with the GPU
 static Circle *CIRCLES;
@@ -124,7 +126,7 @@ void physicsMainLoop(float deltaTime) {
     float xConversion = DSP_WIDTH / 2.0f;
     float yConversion = DSP_HEIGHT / 2.0f;
 
-    int stepSize = 8;
+    int stepSize = 10;
 
     deltaTime /= stepSize;
 
@@ -191,16 +193,15 @@ void physicsMainLoop(float deltaTime) {
             float absX = fabsf(*CIRCLES[i].xPos);
             float absY = fabsf(*CIRCLES[i].yPos);
 
-            if((1.0f - absX) * xConversion  <= 8) {
+            if((1.0f - absX) * xConversion  <= CIRCLE_RADIUS) {
                 CIRCLES[i].vector.xComp *= -1;
             }
-            if((1.0f - absY) * yConversion  <= 8) {
+            if((1.0f - absY) * yConversion  <= CIRCLE_RADIUS) {
                 CIRCLES[i].vector.yComp *= -1;
             }
-            if(step == 0){
-                CIRCLES[i].vector.xComp *= 0.99;
-                CIRCLES[i].vector.yComp *= 0.99;
-            }
+            CIRCLES[i].vector.xComp *= 0.999;
+            CIRCLES[i].vector.yComp *= 0.999;
+
             moveCircle(&CIRCLES[i], deltaTime / 2);
         }
 
@@ -212,6 +213,16 @@ void screenResize() {
     for(int i = 0; i < 12; i += 2){
         CIRCLE_VERTS[i] = points[i] * CIRCLE_RADIUS * 2 / DSP_WIDTH;
         CIRCLE_VERTS[i + 1] = points[i + 1] * CIRCLE_RADIUS * 2 / DSP_HEIGHT;
+    }
+}
+
+void mouseFunction(int button, int state, int x, int y) {
+    if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
+        GRAVITY_VEC.xComp = -0.7;
+        GRAVITY_VEC.yComp = -0.98;
+    } else if(button == GLUT_LEFT_BUTTON && state == GLUT_UP){
+        GRAVITY_VEC.xComp = 0;
+        GRAVITY_VEC.yComp = -0.98;
     }
 }
 
@@ -233,8 +244,8 @@ static void allocBuckets() {
         free(BUCKETS.array);
     }
 
-    BUCKETS.horizontal = ceil(DSP_WIDTH / 58.0); // TODO: Radius
-    BUCKETS.vertical = ceil(DSP_HEIGHT / 58.0); // TODO: Radius
+    BUCKETS.horizontal = ceil(DSP_WIDTH / ((5 * CIRCLE_RADIUS) / 1.375f * 2));
+    BUCKETS.vertical = ceil(DSP_HEIGHT / ((5 * CIRCLE_RADIUS) / 1.375f * 2));
 
     BUCKETS.size = BUCKETS.horizontal * BUCKETS.vertical;
 
@@ -248,8 +259,8 @@ static void loadBuckets() {
     Bucket *inBucket;
 
     for(int i = 0; i < NUM_INSTANCES; i++){
-        int xPos = (int) (((*CIRCLES[i].xPos + 1) / 2) * DSP_WIDTH) / 58; // TODO: Radius
-        int yPos = (int) (((*CIRCLES[i].yPos + 1) / 2) * DSP_HEIGHT) / 58; // TODO: Radius
+        int xPos = (int) (((*CIRCLES[i].xPos + 1) / 2) * DSP_WIDTH) / ((5 * CIRCLE_RADIUS) / 1.375f * 2); // TODO: Radius
+        int yPos = (int) (((*CIRCLES[i].yPos + 1) / 2) * DSP_HEIGHT) / ((5 * CIRCLE_RADIUS) / 1.375f * 2); // TODO: Radius
 
 
         if(xPos + yPos * BUCKETS.horizontal >= BUCKETS.size || xPos + yPos * BUCKETS.horizontal < 0){
@@ -289,17 +300,13 @@ static float repellingForce(const Circle *left, const Circle *right) {
 
     float distance = sqrtf(powf(rightX - leftX, 2) + powf(rightY - leftY, 2));  // TODO: DRY
 
-    distance *= 0.1375f;
+    distance *= 1.375f / CIRCLE_RADIUS;
 
-    if(distance >= 4){
-        return 0;
+    if(distance < 3.5){
+        distance = 3.5;
     }
 
-    if(distance < 2.5){
-        distance = 2.5f;
-    }
-
-    float force = powf(4 / distance, 12);
+    float force = powf(5 / distance, 12);
 
     return force;
 }
