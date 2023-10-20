@@ -9,34 +9,6 @@
 // TODO: localized interaction ~ halfway done
 // TODO: Fix update screen size
 
-
-// Physics structs
-typedef struct Vector{
-    float xComp;
-    float yComp;
-} Vector;
-
-typedef struct Circle{
-    float *xPos;
-    float *yPos;
-    Vector vector;
-} Circle;
-
-typedef struct Bucket{
-    Circle **circArray;
-    int size;
-    int capacity;
-} Bucket;
-
-typedef struct Buckets{
-    Bucket *array;
-    int size;
-    int horizontal;
-    int vertical;
-
-} Buckets;
-
-
 void initStaticPhysics();
 
 void initDynamicPhysics();

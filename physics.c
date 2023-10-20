@@ -1,11 +1,40 @@
 #include "physics.h"
 
+// Physics structs
+typedef struct Vector{
+    float xComp;
+    float yComp;
+} Vector;
+
+typedef struct Circle{
+    float *xPos;
+    float *yPos;
+    Vector vector;
+} Circle;
+
+typedef struct Bucket{
+    Circle **circArray;
+    int size;
+    int capacity;
+} Bucket;
+
+typedef struct Buckets{
+    Bucket *array;
+    int size;
+    int horizontal;
+    int vertical;
+
+} Buckets;
+
 // CONSTANTS
 static const Vector GRAVITY_VEC = {0.0f, -0.5f};
 
-static Circle *circles;
+// Each circle refers to its coordinates in the shared position space with the GPU
+static Circle *CIRCLES;
 
-static Buckets buckets;
+// Buckets for localized updates
+static Buckets BUCKETS;
+
 
 static float points[12] = {
         -1.0f,  -1.0f,
@@ -19,7 +48,7 @@ static float points[12] = {
 
 //----BUCKET FUNCTIONS----//
 // Initialize buckets in relation to size of the screen
-static void initBuckets();
+static void allocBuckets();
 
 // Add a ball to passed bucket
 static void addBallToBucket(Bucket *inBucket, Circle *inBall);
@@ -27,7 +56,7 @@ static void addBallToBucket(Bucket *inBucket, Circle *inBall);
 // Load all buckets
 static void loadBuckets();
 
-// Check for interactions between adjacent buckets
+// Check for interactions between molecules in adjacent buckets
 static void checkBuckets(Bucket *main, Bucket *adj, float deltaTime);
 
 
@@ -54,7 +83,7 @@ void initStaticPhysics() {
 
 // Initialize all instances of the base sprite with initial offsets
 void initDynamicPhysics() { // TODO: Spacing better
-    circles = calloc(NUM_INSTANCES, sizeof(Circle));
+    CIRCLES = calloc(NUM_INSTANCES, sizeof(Circle));
 
     int length = ceil(sqrt(NUM_INSTANCES));
 
@@ -82,14 +111,14 @@ void initDynamicPhysics() { // TODO: Spacing better
     done:
 
     for(int i = 0 ; i < NUM_INSTANCES; i++){
-        circles[i].xPos = INSTANCE_POS + (i * 2);
-        circles[i].yPos = INSTANCE_POS + (i * 2) + 1;
+        CIRCLES[i].xPos = INSTANCE_POS + (i * 2);
+        CIRCLES[i].yPos = INSTANCE_POS + (i * 2) + 1;
     }
 
-    initBuckets();
+    allocBuckets();
 }
 
-// Main runtime loop
+// *** MAIN PHYSICS LOOP ***
 void physicsMainLoop(float deltaTime) {
     float xConversion = DSP_WIDTH / 2.0f;
     float yConversion = DSP_HEIGHT / 2.0f;
@@ -103,14 +132,14 @@ void physicsMainLoop(float deltaTime) {
         loadBuckets();
 
         for(int i = 0; i < NUM_INSTANCES; i++){
-            moveCircle(&circles[i], deltaTime / 2);
+            moveCircle(&CIRCLES[i], deltaTime / 2);
 
-            applyForce(&circles[i].vector, GRAVITY_VEC, deltaTime);
+            applyForce(&CIRCLES[i].vector, GRAVITY_VEC, deltaTime);
         }
 
-        for(int i = 0; i < buckets.size; i++){
+        for(int i = 0; i < BUCKETS.size; i++){
 
-            Bucket *currBucket = &buckets.array[i];
+            Bucket *currBucket = &BUCKETS.array[i];
 
             for(int k = 0; k < currBucket->size; k++){
                 for(int m = k + 1; m < currBucket->size; m++){
@@ -140,38 +169,38 @@ void physicsMainLoop(float deltaTime) {
                 }
             }
 
-            if(i % buckets.horizontal != 0 && i + buckets.horizontal - 1 < buckets.size){
-                checkBuckets(currBucket, buckets.array + i + buckets.horizontal - 1, deltaTime);
+            if(i % BUCKETS.horizontal != 0 && i + BUCKETS.horizontal - 1 < BUCKETS.size){
+                checkBuckets(currBucket, BUCKETS.array + i + BUCKETS.horizontal - 1, deltaTime);
             }
 
-            if(i + buckets.horizontal < buckets.size){
-                checkBuckets(currBucket, buckets.array + i + buckets.horizontal, deltaTime);
+            if(i + BUCKETS.horizontal < BUCKETS.size){
+                checkBuckets(currBucket, BUCKETS.array + i + BUCKETS.horizontal, deltaTime);
             }
 
-            if(i + buckets.horizontal + 1 < buckets.size){
-                checkBuckets(currBucket, buckets.array + i + buckets.horizontal + 1, deltaTime);
+            if(i + BUCKETS.horizontal + 1 < BUCKETS.size){
+                checkBuckets(currBucket, BUCKETS.array + i + BUCKETS.horizontal + 1, deltaTime);
             }
 
-            if(i + 1 < buckets.size && i + 1 % buckets.horizontal != 0){
-                checkBuckets(currBucket, buckets.array + i + 1, deltaTime);
+            if(i + 1 < BUCKETS.size && i + 1 % BUCKETS.horizontal != 0){
+                checkBuckets(currBucket, BUCKETS.array + i + 1, deltaTime);
             }
         }
 
         for(int i = 0; i < NUM_INSTANCES; i++){
-            float absX = fabsf(*circles[i].xPos);
-            float absY = fabsf(*circles[i].yPos);
+            float absX = fabsf(*CIRCLES[i].xPos);
+            float absY = fabsf(*CIRCLES[i].yPos);
 
             if((1.0f - absX) * xConversion  <= 8) {
-                circles[i].vector.xComp *= -1;
+                CIRCLES[i].vector.xComp *= -1;
             }
             if((1.0f - absY) * yConversion  <= 8) {
-                circles[i].vector.yComp *= -1;
+                CIRCLES[i].vector.yComp *= -1;
             }
             if(step == 0){
-                circles[i].vector.xComp *= 0.99;
-                circles[i].vector.yComp *= 0.99;
+                CIRCLES[i].vector.xComp *= 0.99;
+                CIRCLES[i].vector.yComp *= 0.99;
             }
-            moveCircle(&circles[i], deltaTime / 2);
+            moveCircle(&CIRCLES[i], deltaTime / 2);
         }
 
     }
@@ -187,57 +216,56 @@ void screenResize() {
 
 // Deallocate all memory
 void dealloc() {
-    for(int i = 0; i < buckets.size; i++){
-        free(buckets.array[i].circArray);
+    for(int i = 0; i < BUCKETS.size; i++){
+        free(BUCKETS.array[i].circArray);
     }
-    free(buckets.array);
+    free(BUCKETS.array);
 }
 
 
 //----HELPER FUNCTIONS----//
-static void initBuckets() {
-    if(buckets.array != NULL){
-        for(int i = 0; i < buckets.size; i++){
-            free(buckets.array[i].circArray);
+static void allocBuckets() {
+    if(BUCKETS.array != NULL){
+        for(int i = 0; i < BUCKETS.size; i++){
+            free(BUCKETS.array[i].circArray);
         }
-        free(buckets.array);
+        free(BUCKETS.array);
     }
 
-    buckets.horizontal = ceil(DSP_WIDTH / 58.0); // TODO: Radius
-    buckets.vertical = ceil(DSP_HEIGHT / 58.0); // TODO: Radius
+    BUCKETS.horizontal = ceil(DSP_WIDTH / 58.0); // TODO: Radius
+    BUCKETS.vertical = ceil(DSP_HEIGHT / 58.0); // TODO: Radius
 
-    buckets.size = buckets.horizontal * buckets.vertical;
+    BUCKETS.size = BUCKETS.horizontal * BUCKETS.vertical;
 
-    buckets.array = calloc(buckets.size, sizeof(Bucket));
-}
-
-static void addBallToBucket(Bucket *inBucket, Circle *inBall) {
-    if(inBucket->circArray == NULL){
-        inBucket->capacity = 8;
-        inBucket->size = 0;
-        inBucket->circArray = calloc(inBucket->capacity, sizeof(Circle*));
-    }
-    if(inBucket->size == inBucket->capacity){
-        inBucket->circArray = realloc(inBucket->circArray, sizeof(Circle**) * (inBucket->capacity *= 2));
-    }
-    inBucket->circArray[inBucket->size++] = inBall;
+    BUCKETS.array = calloc(BUCKETS.size, sizeof(Bucket));
 }
 
 static void loadBuckets() {
-    for(int i = 0; i < buckets.size; i++){
-        buckets.array[i].size = 0;
+    for(int i = 0; i < BUCKETS.size; i++){
+        BUCKETS.array[i].size = 0;
     }
+    Bucket *inBucket;
 
     for(int i = 0; i < NUM_INSTANCES; i++){
-        int xPos = (int) (((*circles[i].xPos + 1) / 2) * DSP_WIDTH) / 58; // TODO: Radius
-        int yPos = (int) (((*circles[i].yPos + 1) / 2) * DSP_HEIGHT) / 58; // TODO: Radius
+        int xPos = (int) (((*CIRCLES[i].xPos + 1) / 2) * DSP_WIDTH) / 58; // TODO: Radius
+        int yPos = (int) (((*CIRCLES[i].yPos + 1) / 2) * DSP_HEIGHT) / 58; // TODO: Radius
 
 
-        if(xPos + yPos * buckets.horizontal >= buckets.size || xPos + yPos * buckets.horizontal < 0){
+        if(xPos + yPos * BUCKETS.horizontal >= BUCKETS.size || xPos + yPos * BUCKETS.horizontal < 0){
             continue;
         }
 
-        addBallToBucket(&buckets.array[xPos + yPos * buckets.horizontal], &circles[i]);
+        inBucket = BUCKETS.array + xPos + yPos * BUCKETS.horizontal;
+
+        if(inBucket->circArray == NULL){
+            inBucket->capacity = 8;
+            inBucket->size = 0;
+            inBucket->circArray = calloc(inBucket->capacity, sizeof(Circle*));
+        }
+        if(inBucket->size == inBucket->capacity){
+            inBucket->circArray = realloc(inBucket->circArray, sizeof(Circle**) * (inBucket->capacity *= 2));
+        }
+        inBucket->circArray[inBucket->size++] = CIRCLES + i;
     }
 }
 
@@ -302,7 +330,6 @@ static void checkBuckets(Bucket *main, Bucket *adj, float deltaTime) {
                 repelForce.yComp *= -1;
 
                 applyForce(&leftBall->vector, repelForce, deltaTime);
-
             }
         }
     }
