@@ -9,11 +9,12 @@ int main(int argc, char** argv){
     glutCreateWindow("Triangle Using OpenGL");
 
     // Set window attributes
-    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    //glEnable(GL_BLEND);
 
     // glew import
     glewInit();
+
+    CIRCLE_RADIUS = 10;
+    NUM_INSTANCES = 2000;
 
     // Sim Initialize
     initStaticPhysics();
@@ -25,7 +26,8 @@ int main(int argc, char** argv){
     initDynamicPhysics();
 
     // Set the display physics
-    physicsFunc = &physics;
+    PHYSICS_LOOP = &physicsMainLoop;
+    PHYSICS_RESIZE = &screenResize;
 
     // Set opengl running functions
     glutDisplayFunc(display);

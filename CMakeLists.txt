@@ -10,7 +10,8 @@ find_package(glew)
 
 add_executable(PhysicsSim
         main.c
-        graphics.h graphics.c
+        physics.c
+        graphics.c
 )
 
 target_link_libraries(PhysicsSim PRIVATE GLEW::glew)
