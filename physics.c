@@ -27,6 +27,7 @@ typedef struct Buckets{
 } Buckets;
 
 // CONSTANTS
+// Gravity
 static const Vector GRAVITY_VEC = {0.0f, -0.5f};
 
 // Each circle refers to its coordinates in the shared position space with the GPU

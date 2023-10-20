@@ -1,20 +1,23 @@
 #include "physics.h"
 
 int main(int argc, char** argv){
+    // Constants Initialization
+    DSP_WIDTH = 1920;
+    DSP_HEIGHT = 800;
+    CIRCLE_RADIUS = 10;
+    NUM_INSTANCES = 2000;
+
     // Setup window
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_MULTISAMPLE);
-    glutInitWindowSize(DSP_WIDTH = 1920, DSP_HEIGHT = 800);
+    glutInitWindowSize(DSP_WIDTH, DSP_HEIGHT);
     glutInitWindowPosition(0, 100);
-    glutCreateWindow("Triangle Using OpenGL");
+    glutCreateWindow("Physics Simulation");
 
     // Set window attributes
 
     // glew import
     glewInit();
-
-    CIRCLE_RADIUS = 10;
-    NUM_INSTANCES = 2000;
 
     // Sim Initialize
     initStaticPhysics();
