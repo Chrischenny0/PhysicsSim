@@ -9,10 +9,10 @@ void (*PHYSICS_RESIZE)() = NULL;
 
 
 // Graphics globals
-int CIRCLE_RADIUS = 0;   // Radius of each circle
-int NUM_INSTANCES = 0; // Num of circles to draw
-float CIRCLE_VERTS[12];   // Vertices of the base sprite
-float *INSTANCE_POS = NULL;      // Position of each instance (created and share by GPU)
+int CIRCLE_RADIUS = 0;      // Radius of each circle
+int NUM_INSTANCES = 0;      // Num of circles to draw
+float CIRCLE_VERTS[12];     // Vertices of the base sprite
+float *INSTANCE_POS = NULL; // Position of each instance (created and share by GPU)
 
 
 // Display height and width
