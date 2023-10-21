@@ -71,7 +71,7 @@ static void applyForce(Vector *dest, Vector src, float deltaTime);
 static void moveCircle(Circle *circle, float deltaTime);
 
 // Calculate the repelling force between the two circles
-static float repellingForce(const Circle *left, const Circle *right);
+static inline float repellingForce(const Circle *left, const Circle *right);
 
 
 //----PHYSICS ENTRY FUNCTIONS----//
@@ -199,8 +199,8 @@ void physicsMainLoop(float deltaTime) {
             if((1.0f - absY) * yConversion  <= CIRCLE_RADIUS) {
                 CIRCLES[i].vector.yComp *= -1;
             }
-            CIRCLES[i].vector.xComp *= 0.999;
-            CIRCLES[i].vector.yComp *= 0.999;
+            CIRCLES[i].vector.xComp *= 0.998;
+            CIRCLES[i].vector.yComp *= 0.998;
 
             moveCircle(&CIRCLES[i], deltaTime / 2);
         }
@@ -218,11 +218,9 @@ void screenResize() {
 
 void mouseFunction(int button, int state, int x, int y) {
     if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
-        GRAVITY_VEC.xComp = -0.7;
-        GRAVITY_VEC.yComp = -0.98;
+        GRAVITY_VEC.xComp = -0.6;
     } else if(button == GLUT_LEFT_BUTTON && state == GLUT_UP){
         GRAVITY_VEC.xComp = 0;
-        GRAVITY_VEC.yComp = -0.98;
     }
 }
 
@@ -291,7 +289,7 @@ static void moveCircle(Circle *circle, float deltaTime) {
     *circle->yPos += circle->vector.yComp * deltaTime;
 }
 
-static float repellingForce(const Circle *left, const Circle *right) {
+static inline float repellingForce(const Circle *left, const Circle *right) {
     float leftX = (*left->xPos + 1) * (float) DSP_WIDTH / 2; // TODO: DRY
     float leftY = (*left->yPos + 1) * (float) DSP_HEIGHT / 2;
     float rightX = (*right->xPos + 1) * (float) DSP_WIDTH / 2;
@@ -302,8 +300,8 @@ static float repellingForce(const Circle *left, const Circle *right) {
 
     distance *= 1.375f / CIRCLE_RADIUS;
 
-    if(distance < 3.5){
-        distance = 3.5;
+    if(distance < 3.6){
+        distance = 3.6;
     }
 
     float force = powf(5 / distance, 12);
