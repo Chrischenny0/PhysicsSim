@@ -10,7 +10,7 @@ void main() {
     if(dist >= radius){
         discard;
     }
-    float color = sqrt(pow(outVector[0], 2) + pow(outVector[1],2)) * 2;
+    float color = sqrt(pow(outVector[0], 2) + pow(outVector[1],2));
 
     fragColor = vec4(color, 0, 1 - color, 1);
 }

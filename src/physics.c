@@ -31,9 +31,9 @@ typedef struct Buckets{
 int GRAVITY_BOOL;
 
 // Gravity
-static Vector GRAVITY_VEC = {0.0f, -0.5f};
+static Vector GRAVITY_VEC = {0.0f, -0.98f};
 
-static Vector MOUSE_VEC = {-0.5f, -0.5f};
+static Vector MOUSE_VEC = {-0.3f, -0.05f};
 
 static int MOUSE_X;
 static int MOUSE_Y;
@@ -221,8 +221,8 @@ void physicsMainLoop(float deltaTime) {
             if((1.0f - absY) * yConversion  <= CIRCLE_RADIUS) {
                 CIRCLES[i].vector.yComp *= -1;
             }
-            // CIRCLES[i].vector.xComp *= 0.9995;
-            // CIRCLES[i].vector.yComp *= 0.9995;
+            // CIRCLES[i].vector.xComp *= 0.99999;
+            // CIRCLES[i].vector.yComp *= 0.99999;
 
             moveCircle(&CIRCLES[i], deltaTime / 2);
         }
@@ -273,8 +273,8 @@ static void allocBuckets() {
         free(BUCKETS.array);
     }
 
-    BUCKETS.horizontal = ceil(DSP_WIDTH / ((5 * CIRCLE_RADIUS) / 1.375f * 2));
-    BUCKETS.vertical = ceil(DSP_HEIGHT / ((5 * CIRCLE_RADIUS) / 1.375f * 2));
+    BUCKETS.horizontal = ceil(DSP_WIDTH / ((2 * CIRCLE_RADIUS) / 1.375f * 2));
+    BUCKETS.vertical = ceil(DSP_HEIGHT / ((2 * CIRCLE_RADIUS) / 1.375f * 2));
 
     BUCKETS.size = BUCKETS.horizontal * BUCKETS.vertical;
 
@@ -316,6 +316,14 @@ static void applyForce(Vector *dest, Vector src, float deltaTime) {
 }
 
 static void moveCircle(Circle *circle, float deltaTime) {
+    static float limit = 0.9;
+
+    if(fabs(circle->vector.xComp) > limit || isnan(circle->vector.xComp)) {
+        circle->vector.xComp = (circle->vector.xComp > 0) ? limit : -limit;
+    }
+    if(fabs(circle->vector.yComp) > limit || isnan(circle->vector.yComp)) {
+        circle->vector.yComp = (circle->vector.yComp > 0) ? limit : -limit;
+    }
     *circle->xPos += circle->vector.xComp * deltaTime;
     *circle->yPos += circle->vector.yComp * deltaTime;
 }
@@ -331,11 +339,11 @@ static float repellingForce(const Circle *left, const Circle *right) {
 
     distance *= 1.375f / CIRCLE_RADIUS;
 
-    if(distance < 3.6){
-        distance = 3.6;
+    if(distance > 19) {
+        return 0;
     }
 
-    return powf(5 / distance, 12);
+    return -(398580.75 * (powf(distance, 6) - 16607.53125)) / powf(distance, 13);
 }
 
 static void checkBuckets(Bucket *main, Bucket *adj, float deltaTime) {
