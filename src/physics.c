@@ -1,6 +1,5 @@
 #include "physics.h"
 
-#define min(x, y) (x < y)? x : y
 
 // Physics structs
 typedef struct Vector{
@@ -29,14 +28,23 @@ typedef struct Buckets{
 } Buckets;
 
 // CONSTANTS
+int GRAVITY_BOOL;
+
 // Gravity
-static Vector GRAVITY_VEC = {0.0f, -0.98f};
+static Vector GRAVITY_VEC = {0.0f, -0.5f};
+
+static Vector MOUSE_VEC = {-0.5f, -0.5f};
+
+static int MOUSE_X;
+static int MOUSE_Y;
 
 // Each circle refers to its coordinates in the shared position space with the GPU
 static Circle *CIRCLES;
 
 // Buckets for localized updates
 static Buckets BUCKETS;
+
+static GLboolean MOUSE_ACTIVE;
 
 
 static float points[12] = {
@@ -121,7 +129,20 @@ void initDynamicPhysics() { // TODO: Spacing better
     allocBuckets();
 }
 
-// *** MAIN PHYSICS LOOP ***
+// void mouseForceCalc(Bucket *checkBucket){
+//     for(int i = 0; i < checkBucket->size; i++){
+//
+//         float leftX = (*left->xPos + 1) * (float) DSP_WIDTH / 2; // TODO: DRY
+//         float leftY = (*left->yPos + 1) * (float) DSP_HEIGHT / 2;
+//         float rightX = (*right->xPos + 1) * (float) DSP_WIDTH / 2;
+//         float rightY = (*right->yPos + 1) * (float) DSP_HEIGHT / 2;
+//
+//
+//         float distance = sqrtf(powf(rightX - leftX, 2) + powf(rightY - leftY, 2));
+//     }
+// }
+
+//*** MAIN PHYSICS LOOP ***//
 void physicsMainLoop(float deltaTime) {
     float xConversion = DSP_WIDTH / 2.0f;
     float yConversion = DSP_HEIGHT / 2.0f;
@@ -137,7 +158,8 @@ void physicsMainLoop(float deltaTime) {
         for(int i = 0; i < NUM_INSTANCES; i++){
             moveCircle(&CIRCLES[i], deltaTime / 2);
 
-            applyForce(&CIRCLES[i].vector, GRAVITY_VEC, deltaTime);
+            if(GRAVITY_BOOL == 1) applyForce(&CIRCLES[i].vector, GRAVITY_VEC, deltaTime);
+            if(MOUSE_ACTIVE) applyForce(&CIRCLES[i].vector, MOUSE_VEC, deltaTime);
         }
 
         for(int i = 0; i < BUCKETS.size; i++){
@@ -199,12 +221,16 @@ void physicsMainLoop(float deltaTime) {
             if((1.0f - absY) * yConversion  <= CIRCLE_RADIUS) {
                 CIRCLES[i].vector.yComp *= -1;
             }
-            CIRCLES[i].vector.xComp *= 0.998;
-            CIRCLES[i].vector.yComp *= 0.998;
+            // CIRCLES[i].vector.xComp *= 0.9995;
+            // CIRCLES[i].vector.yComp *= 0.9995;
 
             moveCircle(&CIRCLES[i], deltaTime / 2);
         }
+    }
 
+    for(int i = 0; i < NUM_INSTANCES; i++) {
+        VECTOR_COMP[i * 2] = CIRCLES[i].vector.xComp;
+        VECTOR_COMP[i * 2 + 1] = CIRCLES[i].vector.yComp;
     }
 }
 
@@ -216,11 +242,16 @@ void screenResize() {
     }
 }
 
-void mouseFunction(int button, int state, int x, int y) {
-    if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
-        GRAVITY_VEC.xComp = -0.6;
-    } else if(button == GLUT_LEFT_BUTTON && state == GLUT_UP){
-        GRAVITY_VEC.xComp = 0;
+void passiveMouse(int x, int y) {
+    if(MOUSE_ACTIVE){
+        MOUSE_X = x;
+        MOUSE_Y = y;
+    }
+}
+
+void mouseActivation(int button, int state, int x, int y) {
+    if(button == GLUT_LEFT_BUTTON ){
+        MOUSE_ACTIVE = (state == GLUT_DOWN);
     }
 }
 
@@ -289,7 +320,7 @@ static void moveCircle(Circle *circle, float deltaTime) {
     *circle->yPos += circle->vector.yComp * deltaTime;
 }
 
-static inline float repellingForce(const Circle *left, const Circle *right) {
+static float repellingForce(const Circle *left, const Circle *right) {
     float leftX = (*left->xPos + 1) * (float) DSP_WIDTH / 2; // TODO: DRY
     float leftY = (*left->yPos + 1) * (float) DSP_HEIGHT / 2;
     float rightX = (*right->xPos + 1) * (float) DSP_WIDTH / 2;
@@ -304,9 +335,7 @@ static inline float repellingForce(const Circle *left, const Circle *right) {
         distance = 3.6;
     }
 
-    float force = powf(5 / distance, 12);
-
-    return force;
+    return powf(5 / distance, 12);
 }
 
 static void checkBuckets(Bucket *main, Bucket *adj, float deltaTime) {

@@ -5,7 +5,8 @@ int main(int argc, char** argv){
     DSP_WIDTH = 1920;
     DSP_HEIGHT = 800;
     CIRCLE_RADIUS = 4;
-    NUM_INSTANCES = 3000;
+    NUM_INSTANCES = 1500;
+    GRAVITY_BOOL = 1;
 
     // Setup window
     glutInit(&argc, argv);
@@ -31,7 +32,8 @@ int main(int argc, char** argv){
     PHYSICS_RESIZE = &screenResize;
 
     // Set opengl running functions
-    glutMouseFunc(mouseFunction);
+    glutMouseFunc(mouseActivation);
+    glutMotionFunc(passiveMouse);
     glutDisplayFunc(display);
     glutReshapeFunc(resize);
     glutIdleFunc(idle);

@@ -19,6 +19,8 @@ extern int CIRCLE_RADIUS;   // Radius of each circle
 extern int NUM_INSTANCES; // Num of circles to draw
 extern float CIRCLE_VERTS[12];   // Vertices of the base sprite
 extern float *INSTANCE_POS;      // Position of each instance (created and share by GPU)
+extern float *VECTOR_COMP;
+
 
 // Display height and width
 extern int DSP_WIDTH;

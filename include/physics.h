@@ -9,6 +9,9 @@
 // TODO: Add user interaction to sim
 // TODO: localized interaction ~ halfway done
 
+// GLOBALS
+extern int GRAVITY_BOOL;
+
 void initStaticPhysics();
 
 void initDynamicPhysics();
@@ -17,7 +20,9 @@ void physicsMainLoop(float deltaTime);
 
 void screenResize();
 
-void mouseFunction(int, int, int, int);
+void passiveMouse(int, int);
+
+void mouseActivation(int, int, int, int);
 
 void dealloc();
 

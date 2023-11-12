@@ -1,7 +1,6 @@
 #include "graphics.h"
 
 
-
 void (*PHYSICS_LOOP)(float) = NULL;
 
 // Physics callback for resizing
@@ -13,6 +12,7 @@ int CIRCLE_RADIUS = 0;      // Radius of each circle
 int NUM_INSTANCES = 0;      // Num of circles to draw
 float CIRCLE_VERTS[12];     // Vertices of the base sprite
 float *INSTANCE_POS = NULL; // Position of each instance (created and share by GPU)
+float *VECTOR_COMP = NULL;
 
 
 // Display height and width
@@ -28,27 +28,10 @@ static struct timespec prev; // Used for calculating the fps
 
 
 // SHADERS
-static const GLchar *vertexShaderSrc = "#version 460\n"
-                                       "layout (location = 0) in vec2 pos;\n"
-                                       "layout (location = 2) in vec2 offset;\n"
-                                       "out vec2 coords;\n"
-                                       "uniform vec2 size;\n"
-                                       "void main() {\n"
-                                       "    gl_Position = vec4(pos + offset, 0, 1);\n"
-                                       "    coords = (offset + 1) * size * 0.5;\n"
-                                       "}";
+static GLchar vertexShaderSrc[1024];
 
-static const GLchar *fragmentShaderSrc = "#version 460\n"
-                                         "out vec4 fragColor;\n"
-                                         "in vec2 coords;\n"
-                                         "uniform float radius;\n"
-                                         "void main() {\n"
-                                         "    float dist = distance(gl_FragCoord.xy, coords);\n"
-                                         "    if(dist >= radius){\n"
-                                         "        discard;\n"
-                                         "    }\n"
-                                         "    fragColor = vec4(1, 0, 0, 1);\n"
-                                         "}";
+static GLchar fragmentShaderSrc[1024];
+
 
 static GLuint createAndLoadVBO(GLenum usage, void* array, int size){
     GLuint vbo;
@@ -107,11 +90,23 @@ static GLuint createProgramAttachShaders(GLuint vertexShader, GLuint fragmentSha
 
 void initGL() {
 
+    //TODO: Make this not hardcoded
+    FILE* currFile = fopen("circleFragment.frag", "r");
+    fread(fragmentShaderSrc, sizeof(char), 1024, currFile);
+    fclose(currFile);
+
+    currFile = fopen("circleVertex.vert", "r");
+    fread(vertexShaderSrc, sizeof(char), 1024, currFile);
+    fclose(currFile);
+
     //Create vbo and fill it with the vertices
     baseVBO = createAndLoadVBO(GL_STATIC_DRAW, CIRCLE_VERTS, sizeof(CIRCLE_VERTS));
 
     //Create offset VBO
     GLuint instanceVBO = createAndLoadVBO(GL_DYNAMIC_DRAW, NULL, sizeof(float) * NUM_INSTANCES * 2);
+
+    //Create vector component VBO
+    GLuint vectorVBO = createAndLoadVBO(GL_DYNAMIC_DRAW, NULL, sizeof(float) * NUM_INSTANCES * 2);
 
 
     //Create vertex shader, specify script, compile, and check for errors
@@ -125,7 +120,7 @@ void initGL() {
     GLint posAttrib = glGetAttribLocation(shaderProgram, "pos");
 
     // Create a vertex array object (VAO)
-    GLuint  vao;
+    GLuint vao;
     glGenVertexArrays(1, &vao);
 
     // Bing the VAO so all data is added
@@ -144,22 +139,31 @@ void initGL() {
 
     INSTANCE_POS = glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
 
-    glVertexAttribDivisor(startIndex,1);
+    glVertexAttribDivisor(startIndex++,1);
 
     // Set current buffer to null
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, vectorVBO);
+    glVertexAttribPointer(startIndex,2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), NULL);
+    glEnableVertexAttribArray(startIndex);
+
+    VECTOR_COMP = glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);
+
+    glVertexAttribDivisor(startIndex,1);
 
     // Use this created program
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     glUseProgram(shaderProgram);
 
-    GLint sizeUniform = glGetUniformLocation(shaderProgram, "size");
+
+    // Set the uniforms inside the shader
+    GLint uniform = glGetUniformLocation(shaderProgram, "size");
 
     float tmp[] = {DSP_WIDTH, DSP_HEIGHT};
-    glUniform2fv(sizeUniform, 1, tmp);
+    glUniform2fv(uniform, 1, tmp);
 
-    sizeUniform = glGetUniformLocation(shaderProgram, "radius");
+    uniform = glGetUniformLocation(shaderProgram, "radius");
 
-    glUniform1f(sizeUniform, CIRCLE_RADIUS - 1);
+    glUniform1f(uniform, CIRCLE_RADIUS - 1);
 
 
     // Initialize fps counter
