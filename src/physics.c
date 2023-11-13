@@ -29,11 +29,12 @@ typedef struct Buckets{
 
 // CONSTANTS
 int GRAVITY_BOOL;
+float AOE;
 
 // Gravity
-static Vector GRAVITY_VEC = {0.0f, -0.98f};
+static Vector GRAVITY_VEC = {0.0f, -1.5f};
 
-static Vector MOUSE_VEC = {-0.3f, -0.05f};
+static Vector MOUSE_VEC = {-0.5f, -0.5f};
 
 static int MOUSE_X;
 static int MOUSE_Y;
@@ -221,8 +222,6 @@ void physicsMainLoop(float deltaTime) {
             if((1.0f - absY) * yConversion  <= CIRCLE_RADIUS) {
                 CIRCLES[i].vector.yComp *= -1;
             }
-            // CIRCLES[i].vector.xComp *= 0.99999;
-            // CIRCLES[i].vector.yComp *= 0.99999;
 
             moveCircle(&CIRCLES[i], deltaTime / 2);
         }
@@ -273,8 +272,8 @@ static void allocBuckets() {
         free(BUCKETS.array);
     }
 
-    BUCKETS.horizontal = ceil(DSP_WIDTH / ((2 * CIRCLE_RADIUS) / 1.375f * 2));
-    BUCKETS.vertical = ceil(DSP_HEIGHT / ((2 * CIRCLE_RADIUS) / 1.375f * 2));
+    BUCKETS.horizontal = ceil(DSP_WIDTH / (AOE * CIRCLE_RADIUS / 1.375f * 2));
+    BUCKETS.vertical = ceil(DSP_HEIGHT / (AOE * CIRCLE_RADIUS / 1.375f * 2));
 
     BUCKETS.size = BUCKETS.horizontal * BUCKETS.vertical;
 
@@ -288,8 +287,8 @@ static void loadBuckets() {
     Bucket *inBucket;
 
     for(int i = 0; i < NUM_INSTANCES; i++){
-        int xPos = (int) (((*CIRCLES[i].xPos + 1) / 2) * DSP_WIDTH) / ((5 * CIRCLE_RADIUS) / 1.375f * 2); // TODO: Radius
-        int yPos = (int) (((*CIRCLES[i].yPos + 1) / 2) * DSP_HEIGHT) / ((5 * CIRCLE_RADIUS) / 1.375f * 2); // TODO: Radius
+        int xPos = (int) (((*CIRCLES[i].xPos + 1) / 2) * DSP_WIDTH) / (AOE * CIRCLE_RADIUS / 1.375f * 2); // TODO: Radius
+        int yPos = (int) (((*CIRCLES[i].yPos + 1) / 2) * DSP_HEIGHT) / (AOE * CIRCLE_RADIUS / 1.375f * 2); // TODO: Radius
 
 
         if(xPos + yPos * BUCKETS.horizontal >= BUCKETS.size || xPos + yPos * BUCKETS.horizontal < 0){
@@ -339,11 +338,19 @@ static float repellingForce(const Circle *left, const Circle *right) {
 
     distance *= 1.375f / CIRCLE_RADIUS;
 
-    if(distance > 19) {
+    if(distance > 15) {
         return 0;
     }
 
-    return -(398580.75 * (powf(distance, 6) - 16607.53125)) / powf(distance, 13);
+    float force = -(740.183506944 * (powf(distance, 6) - 61681.958912)) / powf(distance, 13); // a = 0.01, c = 5.6
+    // float force = -(7401.83506944 * (powf(distance, 6) - 61681.958912)) / powf(distance, 13); // a = 0.01, c = 5.6
+    // float force = -(74018.3506944 * (powf(distance, 6) - 61681.958912)) / powf(distance, 13); // a = 0.1, c = 5.6
+    // float force = -(740183.506944 * (powf(distance, 6) - 61681.958912)) / powf(distance, 13); // a = 1, c = 5.6
+
+    if(force > 100) {
+        return 100;
+    }
+    return force;
 }
 
 static void checkBuckets(Bucket *main, Bucket *adj, float deltaTime) {

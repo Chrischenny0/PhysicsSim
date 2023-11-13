@@ -11,6 +11,7 @@
 
 // GLOBALS
 extern int GRAVITY_BOOL;
+extern float AOE; // In angstrom
 
 void initStaticPhysics();
 

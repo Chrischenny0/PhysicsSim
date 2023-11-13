@@ -7,6 +7,7 @@ int main(int argc, char** argv){
     CIRCLE_RADIUS = 4;
     NUM_INSTANCES = 1500;
     GRAVITY_BOOL = 1;
+    AOE = 15;
 
     // Setup window
     glutInit(&argc, argv);
