@@ -11,10 +11,13 @@ int main(int argc, char** argv){
 
     // Setup window
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_MULTISAMPLE);
+    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_MULTISAMPLE);
     glutInitWindowSize(DSP_WIDTH, DSP_HEIGHT);
     glutInitWindowPosition(0, 100);
     glutCreateWindow("Physics Simulation");
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 
     // glew import
     glewInit();
