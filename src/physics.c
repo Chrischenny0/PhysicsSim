@@ -32,7 +32,7 @@ int GRAVITY_BOOL;
 float AOE;
 
 // Gravity
-static Vector GRAVITY_VEC = {0.0f, -1.5f};
+static Vector GRAVITY_VEC = {0.0f, -2.5f};
 
 static Vector MOUSE_VEC = {-0.5f, -0.5f};
 
@@ -129,19 +129,6 @@ void initDynamicPhysics() { // TODO: Spacing better
 
     allocBuckets();
 }
-
-// void mouseForceCalc(Bucket *checkBucket){
-//     for(int i = 0; i < checkBucket->size; i++){
-//
-//         float leftX = (*left->xPos + 1) * (float) DSP_WIDTH / 2; // TODO: DRY
-//         float leftY = (*left->yPos + 1) * (float) DSP_HEIGHT / 2;
-//         float rightX = (*right->xPos + 1) * (float) DSP_WIDTH / 2;
-//         float rightY = (*right->yPos + 1) * (float) DSP_HEIGHT / 2;
-//
-//
-//         float distance = sqrtf(powf(rightX - leftX, 2) + powf(rightY - leftY, 2));
-//     }
-// }
 
 //*** MAIN PHYSICS LOOP ***//
 void physicsMainLoop(float deltaTime) {
@@ -342,10 +329,10 @@ static float repellingForce(const Circle *left, const Circle *right) {
         return 0;
     }
 
-    float force = -(740.183506944 * (powf(distance, 6) - 61681.958912)) / powf(distance, 13); // a = 0.01, c = 5.6
+    //float force = -(740.183506944 * (powf(distance, 6) - 61681.958912)) / powf(distance, 13); // a = 0.01, c = 5.6
     // float force = -(7401.83506944 * (powf(distance, 6) - 61681.958912)) / powf(distance, 13); // a = 0.01, c = 5.6
-    // float force = -(74018.3506944 * (powf(distance, 6) - 61681.958912)) / powf(distance, 13); // a = 0.1, c = 5.6
-    // float force = -(740183.506944 * (powf(distance, 6) - 61681.958912)) / powf(distance, 13); // a = 1, c = 5.6
+    float force = -(74018.3506944 * (powf(distance, 6) - 61681.958912)) / powf(distance, 13); // a = 0.1, c = 5.6
+    //float force = -(740183.506944 * (powf(distance, 6) - 61681.958912)) / powf(distance, 13); // a = 1, c = 5.6
 
     if(force > 100) {
         return 100;
