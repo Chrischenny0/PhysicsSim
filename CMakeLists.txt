@@ -3,7 +3,7 @@ project(PhysicsSim C)
 
 set(CMAKE_C_STANDARD 23)
 
-set(CMAKE_C_FLAGS "-ffast-math")
+set(CMAKE_C_FLAGS "-ffast-math -O3")
 
 set(CMAKE_PREFIX_PATH  ${CMAKE_CURRENT_SOURCE_DIR}/FreeGLUT;${CMAKE_CURRENT_SOURCE_DIR}/glew)
 

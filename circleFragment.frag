@@ -7,7 +7,7 @@ uniform float radius;
 
 void main() {
     float dist = distance(gl_FragCoord.xy, coords);
-    float color = (sqrt(pow(outVector[0], 2) + pow(outVector[1],2)) - 0.35) * 2;
+    float color = (sqrt(pow(outVector[0], 2) + pow(outVector[1],2)) - 0.4) * 2;
 
     if(dist >= radius){
         discard;

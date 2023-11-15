@@ -4,10 +4,10 @@ int main(int argc, char** argv){
     // Constants Initialization
     DSP_WIDTH = 1920;
     DSP_HEIGHT = 800;
-    CIRCLE_RADIUS = 4;
+    CIRCLE_RADIUS = 3;
     NUM_INSTANCES = 1500;
     GRAVITY_BOOL = 1;
-    AOE = 15;
+    AOE = 10;
 
     // Setup window
     glutInit(&argc, argv);
